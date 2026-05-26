@@ -14,7 +14,21 @@ connectDB();
 
 const app = express();
 
-app.use(cors({ origin: ["http://localhost:5173", "https://book-my-events-tau.vercel.app"], credentials: true, }));
+app.use(cors({
+    origin: (origin, callback) => {
+        const allowed = [
+            "http://localhost:5173",
+            "https://book-my-events-tau.vercel.app",
+        ];
+        
+        if (!origin || allowed.includes(origin) || origin.endsWith(".vercel.app")) {
+            callback(null, true);
+        } else {
+            callback(new Error("Not allowed by CORS"));
+        }
+    },
+    credentials: true,
+}));
 
 app.use(express.json());
 
