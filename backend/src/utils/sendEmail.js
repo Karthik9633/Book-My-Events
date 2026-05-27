@@ -5,10 +5,13 @@ const transporter = nodemailer.createTransport({
     host: "smtp.gmail.com",
     port: 587,
     secure: false,
+    family: 4,
     auth: {
         user: process.env.EMAIL_USER,
-        pass: process.env.EMAIL_PASS,
+        pass: process.env.EMAIL_PASS
     },
+    connectionTimeout: 10000,
+    greetingTimeout: 10000
 });
 
 transporter.verify((error) => {
@@ -19,7 +22,7 @@ transporter.verify((error) => {
     }
 });
 
-// ─── OTP Email ────────────────────────────────────────────────────────────────
+// OTP Email
 const sendEmail = async (email, otp) => {
     try {
         const info = await transporter.sendMail({
@@ -42,7 +45,7 @@ const sendEmail = async (email, otp) => {
     }
 };
 
-// ─── Ticket Confirmation Email ────────────────────────────────────────────────
+//Ticket Confirmation Email
 export const sendTicketEmail = async ({
     to, userName, eventTitle, eventDate, eventVenue, tierName, quantity, total, eventId,
 }) => {
@@ -91,7 +94,7 @@ export const sendTicketEmail = async ({
     }
 };
 
-// ─── Newsletter Welcome Email ─────────────────────────────────────────────────
+//  Newsletter Welcome Email
 export const sendNewsletterEmail = async (email) => {
     try {
         const info = await transporter.sendMail({
