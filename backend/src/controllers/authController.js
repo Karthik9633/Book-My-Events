@@ -50,7 +50,7 @@ export const registerUser = async (req, res) => {
 
         });
 
-        await sendEmail(email, otp);
+        // await sendEmail(email, otp);
 
         res.status(200).json({
             success: true,
