@@ -1,10 +1,10 @@
 import nodemailer from "nodemailer";
 
-// ✅ Use host/port instead of service:"gmail" — fixes Render IPv6 ENETUNREACH error
+
 const transporter = nodemailer.createTransport({
     host: "smtp.gmail.com",
     port: 587,
-    secure: false, // STARTTLS
+    secure: false,
     auth: {
         user: process.env.EMAIL_USER,
         pass: process.env.EMAIL_PASS,
