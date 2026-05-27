@@ -1,7 +1,10 @@
 import nodemailer from "nodemailer";
 
+// ✅ Use host/port instead of service:"gmail" — fixes Render IPv6 ENETUNREACH error
 const transporter = nodemailer.createTransport({
-    service: "gmail",
+    host: "smtp.gmail.com",
+    port: 587,
+    secure: false, // STARTTLS
     auth: {
         user: process.env.EMAIL_USER,
         pass: process.env.EMAIL_PASS,
@@ -97,22 +100,16 @@ export const sendNewsletterEmail = async (email) => {
             subject: "Welcome to BookMyEvent Newsletter 🎉",
             html: `
             <div style="font-family: Arial, sans-serif; max-width: 600px; margin: auto; border: 1px solid #e5e7eb; border-radius: 16px; overflow: hidden;">
-
-                <!-- HEADER -->
                 <div style="background-color: #7C3AED; padding: 40px 32px; text-align: center;">
                     <h1 style="color: white; margin: 0; font-size: 28px;">🎉 You're In!</h1>
                     <p style="color: #e9d5ff; margin-top: 8px; font-size: 16px;">Welcome to the BookMyEvent community</p>
                 </div>
-
-                <!-- BODY -->
                 <div style="padding: 32px;">
                     <p style="font-size: 16px; color: #111827;">Hey there! 👋</p>
                     <p style="color: #6b7280; font-size: 15px; line-height: 1.6;">
-                        You've successfully subscribed to <strong>BookMyEvent</strong>. 
+                        You've successfully subscribed to <strong>BookMyEvent</strong>.
                         Get ready for weekly updates on the best events happening near you — concerts, tech talks, food festivals, and more!
                     </p>
-
-                    <!-- WHAT TO EXPECT BOX -->
                     <div style="background: #f5f3ff; border-radius: 12px; padding: 24px; margin: 24px 0;">
                         <h3 style="color: #7C3AED; margin: 0 0 12px;">What to expect 📬</h3>
                         <ul style="color: #374151; font-size: 14px; line-height: 2; padding-left: 20px;">
@@ -122,21 +119,16 @@ export const sendNewsletterEmail = async (email) => {
                             <li>🎁 Special subscriber-only discounts</li>
                         </ul>
                     </div>
-
-                    <!-- CTA -->
                     <div style="text-align: center; margin: 32px 0;">
                         <a href="${process.env.CLIENT_URL}"
                            style="background-color: #7C3AED; color: white; padding: 14px 36px; border-radius: 50px; text-decoration: none; font-weight: bold; font-size: 15px;">
                             Explore Events Now →
                         </a>
                     </div>
-
                     <p style="color: #9ca3af; font-size: 13px; text-align: center;">
                         You can unsubscribe at any time by replying to this email.
                     </p>
                 </div>
-
-                <!-- FOOTER -->
                 <div style="background: #f9fafb; padding: 20px; text-align: center; font-size: 12px; color: #9ca3af;">
                     <p>© 2024 BookMyEvent. All rights reserved.</p>
                 </div>
