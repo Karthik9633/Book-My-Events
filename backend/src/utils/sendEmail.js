@@ -1,7 +1,9 @@
 import nodemailer from "nodemailer";
 
 const transporter = nodemailer.createTransport({
-    service: "gmail",
+    host: "smtp.gmail.com",
+    port: 465,
+    secure: true,
 
     auth: {
         user: process.env.EMAIL_USER,
@@ -10,20 +12,16 @@ const transporter = nodemailer.createTransport({
 
     family: 4,
 
-    tls: {
-        rejectUnauthorized: false
-    },
-
-    connectionTimeout: 15000,
-    greetingTimeout: 15000,
-    socketTimeout: 15000
+    connectionTimeout: 30000,
+    greetingTimeout: 30000,
+    socketTimeout: 30000
 });
 
-transporter.verify((error, success) => {
-    if (error) {
-        console.log("EMAIL ERROR:", error);
+transporter.verify((err) => {
+    if (err) {
+        console.log("SMTP ERROR:", err);
     } else {
-        console.log("EMAIL READY");
+        console.log("SMTP READY");
     }
 });
 
