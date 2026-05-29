@@ -503,7 +503,7 @@ export const getTrendingEvents = async (req, res) => {
     }
 };
 
-// GET /api/events/:id/analytics  — organizer sees tier breakdown + bookings
+
 export const getEventAnalytics = async (req, res) => {
     try {
         const event = await Event.findById(req.params.id.trim())
