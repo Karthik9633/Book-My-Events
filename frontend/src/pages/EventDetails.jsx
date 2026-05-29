@@ -3,7 +3,7 @@ import { useState, useEffect } from "react";
 import EventMap from "../components/EventMap";
 import { useAuth } from "../context/AuthContext";
 import { fetchEvent, fetchRSVP, updateRSVP, createOrder } from "../api/eventApi";
-import API from "../api/axios"; // ✅ needed for verify call
+import API from "../api/axios";
 
 const EventDetails = () => {
     const { id } = useParams();
@@ -18,6 +18,8 @@ const EventDetails = () => {
     const [going, setGoing] = useState(0);
     const [userRSVP, setUserRSVP] = useState(null);
     const [timeLeft, setTimeLeft] = useState({ days: 0, hours: 0, minutes: 0, seconds: 0 });
+    // Mobile booking sheet toggle
+    const [showBookingSheet, setShowBookingSheet] = useState(false);
 
     useEffect(() => {
         window.scrollTo({ top: 0, behavior: "auto" });
@@ -113,7 +115,6 @@ const EventDetails = () => {
 
     const handleRegister = async () => {
         if (!user) { navigate("/login"); return; }
-
         navigate("/order-summary", {
             state: {
                 event,
@@ -126,8 +127,6 @@ const EventDetails = () => {
                 ],
             },
         });
-
-        // Free event — skip payment
         if (total === 0) {
             registerTicket({ id: Date.now(), eventId: event._id, eventTitle: event.title, image, date, location: venue, tier: selectedTier, quantity, total });
             navigate(`/success/${event._id}`, { state: { tier: selectedTier, quantity, total } });
@@ -135,82 +134,186 @@ const EventDetails = () => {
         }
     };
 
+    // Reusable booking panel content
+    const BookingPanel = () => (
+        <>
+            <h2 className="text-2xl sm:text-3xl font-bold text-purple-600 mb-4 sm:mb-6">
+                ₹ {total}
+            </h2>
+
+            <select
+                value={selectedTier?.name || ""}
+                onChange={(e) => {
+                    const tier = event.ticketTiers.find((t) => t.name === e.target.value);
+                    setSelectedTier(tier);
+                    setQuantity(1);
+                }}
+                className="w-full border p-3 rounded-xl mb-4 text-sm sm:text-base"
+            >
+                {event.ticketTiers?.map((tier) => {
+                    const remaining = (tier.capacity || 0) - (tier.sold || 0);
+                    const soldOut = tier.capacity && remaining <= 0;
+                    return (
+                        <option key={tier._id} value={tier.name} disabled={soldOut}>
+                            {soldOut ? "🔴" : remaining <= 10 ? "🟡" : "🟢"}{" "}
+                            {tier.name}{" — ₹ "}{tier.price}
+                            {soldOut ? " • Sold Out" : ""}
+                        </option>
+                    );
+                })}
+            </select>
+
+            <div className="flex gap-4 text-xs text-gray-500 mb-4">
+                <span>🟢 Available</span>
+                <span>🟡 Few Left</span>
+                <span>🔴 Sold Out</span>
+            </div>
+
+            <div className="mb-5">
+                <div className="flex items-center justify-between mb-2">
+                    <p className="font-semibold text-sm sm:text-base">Quantity</p>
+                    <p className={`text-xs sm:text-sm font-medium ${isSoldOut ? "text-red-600" : remainingTickets <= 10 ? "text-red-500" : "text-green-600"}`}>
+                        {isSoldOut ? "Sold Out" : remainingTickets <= 10
+                            ? `Only ${remainingTickets} left`
+                            : `${remainingTickets} available`}
+                    </p>
+                </div>
+
+                <div className="flex items-center gap-3">
+                    <button
+                        onClick={() => setQuantity(Math.max(1, quantity - 1))}
+                        className="w-11 h-11 sm:w-12 sm:h-12 rounded-xl border text-xl font-bold hover:bg-gray-100 active:bg-gray-200 touch-manipulation"
+                    >
+                        -
+                    </button>
+                    <div className="flex-1 text-center border rounded-xl py-3 font-bold text-lg">
+                        {quantity}
+                    </div>
+                    <button
+                        onClick={() => { if (quantity < remainingTickets) setQuantity(quantity + 1); }}
+                        disabled={quantity >= remainingTickets}
+                        className="w-11 h-11 sm:w-12 sm:h-12 rounded-xl border text-xl font-bold hover:bg-gray-100 active:bg-gray-200 disabled:opacity-40 touch-manipulation"
+                    >
+                        +
+                    </button>
+                </div>
+            </div>
+
+            <button
+                onClick={handleRegister}
+                disabled={isSoldOut}
+                className="w-full bg-purple-600 text-white rounded-xl py-4 font-bold text-base sm:text-lg disabled:opacity-50 hover:bg-purple-700 active:bg-purple-800 transition touch-manipulation"
+            >
+                {isSoldOut ? "Sold Out" : "Register Now"}
+            </button>
+        </>
+    );
+
     return (
-        <div className="bg-gray-50 min-h-screen pb-20">
-            <div className="max-w-7xl mx-auto px-6 pt-6">
-                <Link to="/">Home</Link> {" > "} {event.title}
+        // Extra bottom padding on mobile for the sticky CTA bar
+        <div className="bg-gray-50 min-h-screen pb-24 lg:pb-10">
+
+            {/* Breadcrumb */}
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 pt-4 sm:pt-6 text-sm text-gray-500 truncate">
+                <Link to="/" className="hover:text-purple-600">Home</Link>
+                {" > "}
+                <span className="text-gray-800 font-medium line-clamp-1">{event.title}</span>
             </div>
 
-            <div className="max-w-7xl mx-auto px-6 mt-6">
-                <img src={image} alt={event.title} className="w-full h-[450px] rounded-3xl object-cover shadow-lg" />
+            {/* Hero Image */}
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 mt-4 sm:mt-6">
+                <img
+                    src={image}
+                    alt={event.title}
+                    className="w-full h-[220px] sm:h-[320px] lg:h-[450px] rounded-2xl sm:rounded-3xl object-cover shadow-lg"
+                />
             </div>
 
-            <div className="max-w-7xl mx-auto grid lg:grid-cols-3 gap-8 px-6 mt-10">
+            {/* Main Grid */}
+            <div className="max-w-7xl mx-auto grid lg:grid-cols-3 gap-6 sm:gap-8 px-4 sm:px-6 mt-6 sm:mt-10">
+
+                {/* ── Left / Main Content ── */}
                 <div className="lg:col-span-2">
-                    <h1 className="text-4xl font-bold mb-6">{event.title}</h1>
 
-                    <div className="mb-8">
+                    {/* Title */}
+                    <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold mb-4 sm:mb-6 leading-tight">
+                        {event.title}
+                    </h1>
+
+                    {/* Date & Venue */}
+                    <div className="mb-6 space-y-1 text-sm sm:text-base text-gray-700">
                         <p>📅 {date}</p>
                         <p>📍 {venue}</p>
                     </div>
 
-                    <div className="bg-white rounded-2xl p-6 mb-8 shadow">
-                        <h3 className="font-bold text-xl mb-4">Community Interest</h3>
-                        <div className="flex gap-4">
+                    {/* Community Interest */}
+                    <div className="bg-white rounded-2xl p-4 sm:p-6 mb-6 shadow">
+                        <h3 className="font-bold text-lg sm:text-xl mb-3 sm:mb-4">Community Interest</h3>
+                        <div className="flex flex-wrap gap-3">
                             <button
                                 onClick={() => handleRSVP("interested")}
-                                className={`px-5 py-3 rounded-xl ${userRSVP === "interested" ? "bg-pink-600 text-white" : "border"}`}
+                                className={`flex-1 min-w-[120px] px-4 py-3 rounded-xl text-sm sm:text-base font-medium touch-manipulation transition
+                                    ${userRSVP === "interested" ? "bg-pink-600 text-white" : "border hover:bg-gray-50"}`}
                             >
                                 ❤️ Interested ({interested})
                             </button>
                             <button
                                 onClick={() => handleRSVP("going")}
-                                className={`px-5 py-3 rounded-xl ${userRSVP === "going" ? "bg-green-600 text-white" : "border"}`}
+                                className={`flex-1 min-w-[120px] px-4 py-3 rounded-xl text-sm sm:text-base font-medium touch-manipulation transition
+                                    ${userRSVP === "going" ? "bg-green-600 text-white" : "border hover:bg-gray-50"}`}
                             >
                                 ✅ Going ({going})
                             </button>
                         </div>
                     </div>
 
-                    <div className="bg-white rounded-2xl shadow-sm p-6 mb-8">
-                        <h3 className="text-xl font-bold mb-4">📤 Share Event</h3>
-                        <div className="flex flex-wrap gap-3">
-                            <button onClick={handleWhatsApp} className="bg-green-600 text-white px-5 py-3 rounded-xl font-semibold hover:bg-green-700 transition">WhatsApp</button>
-                            <button onClick={handleCopyLink} className="border border-gray-300 px-5 py-3 rounded-xl font-semibold hover:bg-gray-100 transition">Copy Link</button>
-                            <button onClick={handleNativeShare} className="bg-purple-600 text-white px-5 py-3 rounded-xl font-semibold hover:bg-purple-700 transition">Share</button>
+                    {/* Share */}
+                    <div className="bg-white rounded-2xl shadow-sm p-4 sm:p-6 mb-6">
+                        <h3 className="text-lg sm:text-xl font-bold mb-3 sm:mb-4">📤 Share Event</h3>
+                        <div className="flex flex-wrap gap-2 sm:gap-3">
+                            <button
+                                onClick={handleWhatsApp}
+                                className="flex-1 min-w-[100px] bg-green-600 text-white px-4 py-3 rounded-xl font-semibold text-sm hover:bg-green-700 active:bg-green-800 transition touch-manipulation"
+                            >
+                                WhatsApp
+                            </button>
+                            <button
+                                onClick={handleCopyLink}
+                                className="flex-1 min-w-[100px] border border-gray-300 px-4 py-3 rounded-xl font-semibold text-sm hover:bg-gray-100 active:bg-gray-200 transition touch-manipulation"
+                            >
+                                Copy Link
+                            </button>
+                            <button
+                                onClick={handleNativeShare}
+                                className="flex-1 min-w-[100px] bg-purple-600 text-white px-4 py-3 rounded-xl font-semibold text-sm hover:bg-purple-700 active:bg-purple-800 transition touch-manipulation"
+                            >
+                                Share
+                            </button>
                         </div>
                     </div>
 
-                    <div className="bg-purple-100 rounded-2xl p-6 mb-8">
-                        <div className="grid grid-cols-4 gap-3 text-center">
+                    {/* Countdown */}
+                    <div className="bg-purple-100 rounded-2xl p-4 sm:p-6 mb-6">
+                        <div className="grid grid-cols-4 gap-2 sm:gap-3 text-center">
                             {Object.entries(timeLeft).map(([k, v]) => (
-                                <div key={k}>
-                                    <p className="font-bold text-2xl">{v}</p>
-                                    <p>{k}</p>
+                                <div key={k} className="bg-white/60 rounded-xl py-3 px-1">
+                                    <p className="font-bold text-xl sm:text-2xl text-purple-700">{v}</p>
+                                    <p className="text-xs sm:text-sm capitalize text-gray-600">{k}</p>
                                 </div>
                             ))}
                         </div>
                     </div>
 
-                    <div className="mb-10">
-                        <h2 className="text-2xl font-bold mb-4">
-                            About this event
-                        </h2>
-
-                        <p className="text-gray-600 leading-relaxed mb-6">
+                    {/* About */}
+                    <div className="mb-8 sm:mb-10">
+                        <h2 className="text-xl sm:text-2xl font-bold mb-3 sm:mb-4">About this event</h2>
+                        <p className="text-gray-600 leading-relaxed mb-4 sm:mb-6 text-sm sm:text-base">
                             {event.description}
                         </p>
-
-                        <ul className="space-y-3 text-gray-600">
+                        <ul className="space-y-2 sm:space-y-3 text-gray-600">
                             {event.tags?.map((item, index) => (
-                                <li
-                                    key={index}
-                                    className="flex items-start gap-2"
-                                >
-                                    <span className="text-purple-600 font-bold">
-                                        ✔
-                                    </span>
-
+                                <li key={index} className="flex items-start gap-2 text-sm sm:text-base">
+                                    <span className="text-purple-600 font-bold mt-0.5">✔</span>
                                     {item.replace(/"/g, "").trim()}
                                 </li>
                             ))}
@@ -220,157 +323,46 @@ const EventDetails = () => {
                     <EventMap lat={event.location?.geo?.lat} lng={event.location?.geo?.lng} />
                 </div>
 
-                <div className="bg-white rounded-3xl p-8 shadow h-fit sticky top-24">
-                    <h2 className="text-3xl font-bold text-purple-600 mb-6">₹ {total}</h2>
-
-                    <select
-                        value={selectedTier?.name || ""}
-                        onChange={(e) => {
-
-                            const tier = event.ticketTiers.find(
-                                (t) => t.name === e.target.value
-                            );
-
-                            setSelectedTier(tier);
-
-                            setQuantity(1);
-
-                        }}
-                        className="w-full border p-3 rounded-xl mb-4"
-                    >
-                        {event.ticketTiers?.map((tier) => {
-
-                            const remaining =
-                                (tier.capacity || 0) -
-                                (tier.sold || 0);
-
-                            const soldOut =
-                                tier.capacity &&
-                                remaining <= 0;
-
-                            return (
-                                <option
-                                    key={tier._id}
-                                    value={tier.name}
-                                    disabled={soldOut}
-                                >
-                                    {
-                                        soldOut
-                                            ? "🔴"
-                                            : remaining <= 10
-                                                ? "🟡"
-                                                : "🟢"
-                                    }
-
-                                    {" "}
-
-                                    {tier.name}
-
-                                    {" — ₹ "}
-
-                                    {tier.price}
-
-                                    {
-                                        soldOut
-                                            ? " • Sold Out"
-                                            : ""
-                                    }
-
-                                </option>
-                            );
-                        })}
-                    </select>
-
-                    <div className="flex gap-4 text-xs text-gray-500 mb-4">
-
-                        <span>
-                            🟢 Available
-                        </span>
-
-                        <span>
-                            🟡 Few Left
-                        </span>
-
-                        <span>
-                            🔴 Sold Out
-                        </span>
-
-                    </div>
-
-                    <div className="mb-6">
-
-                        <div className="flex items-center justify-between mb-2">
-
-                            <p className="font-semibold">
-                                Quantity
-                            </p>
-
-                            <p className={`text-sm font-medium ${isSoldOut
-                                ? "text-red-600"
-                                : remainingTickets <= 10
-                                    ? "text-red-500"
-                                    : "text-green-600"
-                                }`}>
-                                {
-                                    isSoldOut
-                                        ? "Sold Out"
-                                        : remainingTickets <= 10
-                                            ? `Only ${remainingTickets} tickets left`
-                                            : `${remainingTickets} tickets available`
-                                }
-                            </p>
-
-                        </div>
-
-                        <div className="flex items-center gap-3">
-
-                            <button
-                                onClick={() =>
-                                    setQuantity(
-                                        Math.max(1, quantity - 1)
-                                    )
-                                }
-                                className="w-12 h-12 rounded-xl border text-xl font-bold hover:bg-gray-100"
-                            >
-                                -
-                            </button>
-
-                            <div className="flex-1 text-center border rounded-xl py-3 font-bold text-lg">
-                                {quantity}
-                            </div>
-
-                            <button
-                                onClick={() => {
-
-                                    if (
-                                        quantity < remainingTickets
-                                    ) {
-                                        setQuantity(
-                                            quantity + 1
-                                        );
-                                    }
-
-                                }}
-                                disabled={
-                                    quantity >= remainingTickets
-                                }
-                                className="w-12 h-12 rounded-xl border text-xl font-bold hover:bg-gray-100 disabled:opacity-40"
-                            >
-                                +
-                            </button>
-
-                        </div>
-
-                    </div>
-
-                    <button onClick={handleRegister} disabled={isSoldOut} className="w-full bg-purple-600 text-white rounded-xl py-4 font-bold disabled:opacity-50">
-                        {
-                            isSoldOut
-                                ? "Sold Out"
-                                : "Register Now"
-                        }
-                    </button>
+                {/* ── Desktop Booking Sidebar ── */}
+                <div className="hidden lg:block bg-white rounded-3xl p-8 shadow h-fit sticky top-24">
+                    <BookingPanel />
                 </div>
+            </div>
+
+            {/* ── Mobile Booking Bottom Bar ── */}
+            <div className="lg:hidden fixed bottom-0 left-0 right-0 z-50 bg-white border-t border-gray-200 shadow-xl">
+                {/* Collapsed bar */}
+                {!showBookingSheet && (
+                    <div className="flex items-center justify-between px-4 py-3 gap-3">
+                        <div>
+                            <p className="text-xs text-gray-500">Total</p>
+                            <p className="text-xl font-bold text-purple-600">₹ {total}</p>
+                        </div>
+                        <button
+                            onClick={() => setShowBookingSheet(true)}
+                            disabled={isSoldOut}
+                            className="flex-1 bg-purple-600 text-white rounded-xl py-3 font-bold text-base disabled:opacity-50 active:bg-purple-800 touch-manipulation"
+                        >
+                            {isSoldOut ? "Sold Out" : "Book Tickets"}
+                        </button>
+                    </div>
+                )}
+
+                {/* Expanded sheet */}
+                {showBookingSheet && (
+                    <div className="px-4 pt-3 pb-6 max-h-[85vh] overflow-y-auto">
+                        <div className="flex items-center justify-between mb-4">
+                            <h3 className="font-bold text-lg">Book Tickets</h3>
+                            <button
+                                onClick={() => setShowBookingSheet(false)}
+                                className="text-gray-400 hover:text-gray-700 text-2xl leading-none touch-manipulation"
+                            >
+                                ✕
+                            </button>
+                        </div>
+                        <BookingPanel />
+                    </div>
+                )}
             </div>
         </div>
     );
