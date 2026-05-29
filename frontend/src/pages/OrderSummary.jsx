@@ -8,13 +8,13 @@ import { Calendar, MapPin, Clock, Shield, CreditCard } from "lucide-react";
 const OrderSummary = () => {
     const navigate = useNavigate();
     const { state } = useLocation();
-    const { user, registerTicket } = useAuth();
+    const { user } = useAuth();
 
     const { event, selectedTickets } = state || {};
 
     if (!event) return <div className="p-10">No order found</div>;
 
-    
+
     const image = event.images?.[0] || "https://picsum.photos/800/500";
 
     const date = new Date(event.date).toLocaleDateString("en-IN", {
@@ -35,6 +35,22 @@ const OrderSummary = () => {
         if (!user) { navigate("/login"); return; }
 
         try {
+            const selectedTier = selectedTickets[0];
+
+            const liveTier = event.ticketTiers.find(
+                (t) => t.name === selectedTier.name
+            );
+
+            if (
+                liveTier.capacity &&
+                liveTier.sold + selectedTier.quantity > liveTier.capacity
+            ) {
+                return alert(
+                    `Only ${liveTier.capacity - liveTier.sold
+                    } tickets remaining`
+                );
+            }
+
             const { data } = await createOrder(Math.round(total));
             const order = data.order;
 
@@ -59,24 +75,16 @@ const OrderSummary = () => {
                             total: Math.round(total),
                             userEmail: user.email,
                             userName: user.name,
+                        }, {
+                            headers: {
+                                Authorization: `Bearer ${localStorage.getItem("token")
+                                    }`
+                            }
                         });
                         console.log("Ticket email sent ✅");
                     } catch (err) {
                         console.log("Email sending failed:", err);
                     }
-
-                    // Save ticket locally
-                    registerTicket({
-                        id: Date.now(),
-                        eventId: event._id,
-                        eventTitle: event.title,
-                        image,
-                        date,
-                        location: venue,
-                        tier: selectedTickets[0],
-                        quantity: selectedTickets[0]?.quantity || 1,
-                        total: Math.round(total),
-                    });
 
                     navigate(`/success/${event._id}`, {
                         state: {
