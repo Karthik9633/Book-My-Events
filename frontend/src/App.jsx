@@ -17,13 +17,15 @@ import VerifyOTP from "./pages/VerifyOTP";
 import OrganizerDashboard from "./pages/OrganizerDashboard";
 import CreateEvent from "./pages/CreateEvent";
 import ProtectedRoute from "./components/ProtectedRoute";
+import OrganizerRoute from "./components/OrganizerRoute";
+import UserOnlyRoute from "./components/UserOnlyRoute";
 import MyEvents from "./pages/MyEvents";
 import ForgotPassword from "./pages/ForgotPassword";
 import ResetPassword from "./pages/ResetPassword";
-import OrderSummary from "./pages/OrderSummary"
+import OrderSummary from "./pages/OrderSummary";
+import Analytics from "./pages/Analytics";
 
 function App() {
-
   const location = useLocation();
 
   const hideLayout =
@@ -31,126 +33,43 @@ function App() {
     location.pathname === "/signup";
 
   return (
-
     <div className="min-h-screen bg-white">
 
       {!hideLayout && <Navbar />}
 
-      <main
-        className={
-          !hideLayout
-            ? "pt-[88px]"
-            : ""
-        }
-      >
-
+      <main className={!hideLayout ? "pt-[88px]" : ""}>
         <Routes>
 
-          <Route path="/" element={<Home />} />
-          <Route path="/discover" element={<Discover />} />
-          <Route path="/event/:id" element={<EventDetails />} />
-          <Route path="/calendar" element={<CalendarPage />} />
-
-          <Route path="/map" element={<MapPage />} />
-
-          <Route path="/search" element={<SearchResults />} />
-
+          {/* ── Fully public ───────────────────────────────────────── */}
           <Route path="/login" element={<Login />} />
-
           <Route path="/signup" element={<Signup />} />
+          <Route path="/verify-otp" element={<VerifyOTP />} />
+          <Route path="/forgot-password" element={<ForgotPassword />} />
+          <Route path="/reset-password" element={<ResetPassword />} />
 
-          <Route path="/favorites" element={
-            <ProtectedRoute>
-              <MyFavorites />
-            </ProtectedRoute>
-          }
-          />
+          {/* ── Shared (any logged-in user) ────────────────────────── */}
+          <Route path="/about" element={<About />} />
 
-          <Route
-            path="/success/:id"
-            element={<RegistrationSuccess />}
-          />
+          {/* ── User / attendee only (organizers redirected away) ──── */}
+          <Route path="/" element={<UserOnlyRoute><Home /></UserOnlyRoute>} />
+          <Route path="/discover" element={<UserOnlyRoute><Discover /></UserOnlyRoute>} />
+          <Route path="/event/:id" element={<UserOnlyRoute><EventDetails /></UserOnlyRoute>} />
+          <Route path="/calendar" element={<UserOnlyRoute><CalendarPage /></UserOnlyRoute>} />
+          <Route path="/map" element={<UserOnlyRoute><MapPage /></UserOnlyRoute>} />
+          <Route path="/search" element={<UserOnlyRoute><SearchResults /></UserOnlyRoute>} />
+          <Route path="/success/:id" element={<UserOnlyRoute><RegistrationSuccess /></UserOnlyRoute>} />
+          <Route path="/favorites" element={<ProtectedRoute><UserOnlyRoute><MyFavorites /></UserOnlyRoute></ProtectedRoute>} />
+          <Route path="/mytickets" element={<ProtectedRoute><UserOnlyRoute><MyTickets /></UserOnlyRoute></ProtectedRoute>} />
+          <Route path="/order-summary" element={<ProtectedRoute><UserOnlyRoute><OrderSummary /></UserOnlyRoute></ProtectedRoute>} />
 
-          <Route
-            path="/mytickets"
-            element={<MyTickets />}
-          />
-
-          <Route
-            path="/about"
-            element={<About />}
-          />
-          <Route
-            path="/verify-otp"
-            element={<VerifyOTP />}
-          />
-          <Route
-            path="/organizer"
-            element={
-              <ProtectedRoute>
-
-                <OrganizerDashboard />
-
-              </ProtectedRoute>
-            }
-          />
-
-          <Route
-            path="/create-event"
-            element={
-              <ProtectedRoute>
-
-                <CreateEvent />
-
-              </ProtectedRoute>
-            }
-          />
-
-          <Route
-            path="/edit-event/:id"
-            element={
-              <ProtectedRoute>
-
-                <CreateEvent />
-
-              </ProtectedRoute>
-            }
-          />
-
-          <Route
-
-            path="/my-events"
-
-            element={
-
-              <ProtectedRoute>
-
-                <MyEvents />
-
-              </ProtectedRoute>
-
-            }
-
-          />
-
-          <Route
-            path="/forgot-password"
-            element={
-              <ForgotPassword />
-            }
-          />
-
-          <Route
-            path="/reset-password"
-            element={
-              <ResetPassword />
-            }
-          />
-
-          <Route path="/order-summary" element={<OrderSummary />} />
+          {/* ── Organizer / Admin only ─────────────────────────────── */}
+          <Route path="/organizer" element={<OrganizerRoute><OrganizerDashboard /></OrganizerRoute>} />
+          <Route path="/create-event" element={<OrganizerRoute><CreateEvent /></OrganizerRoute>} />
+          <Route path="/edit-event/:id" element={<OrganizerRoute><CreateEvent /></OrganizerRoute>} />
+          <Route path="/my-events" element={<OrganizerRoute><MyEvents /></OrganizerRoute>} />
+          <Route path="/analytics" element={<OrganizerRoute><Analytics /></OrganizerRoute>} />
 
         </Routes>
-
       </main>
 
       {!hideLayout && <Footer />}
