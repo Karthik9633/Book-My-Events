@@ -2,23 +2,21 @@ import nodemailer from "nodemailer";
 
 
 const transporter = nodemailer.createTransport({
-    host: "smtp.gmail.com",
-    port: 587,
+    host: process.env.SMTP_HOST,
+    port: process.env.SMTP_PORT,
     secure: false,
-    family: 4,
     auth: {
-        user: process.env.EMAIL_USER,
-        pass: process.env.EMAIL_PASS
+        user: process.env.SMTP_USER,
+        pass: process.env.SMTP_PASS,
     },
-    connectionTimeout: 10000,
-    greetingTimeout: 10000
+
 });
 
 transporter.verify((error) => {
     if (error) {
         console.log("EMAIL ERROR:", error);
     } else {
-        console.log("EMAIL SERVER READY");
+        console.log("EMAIL SERVER READY")
     }
 });
 
@@ -26,7 +24,7 @@ transporter.verify((error) => {
 const sendEmail = async (email, otp) => {
     try {
         const info = await transporter.sendMail({
-            from: `BookMyEvent <${process.env.EMAIL_USER}>`,
+            from: `BookMyEvent <${process.env.EMAIL_FROM}>`,
             to: email,
             subject: "BookMyEvent OTP Verification",
             html: `
@@ -51,7 +49,7 @@ export const sendTicketEmail = async ({
 }) => {
     try {
         const info = await transporter.sendMail({
-            from: `"BookMyEvent" <${process.env.EMAIL_USER}>`,
+            from: `"BookMyEvent" <${process.env.EMAIL_FROM}>`,
             to,
             subject: `Your Ticket for ${eventTitle} 🎟️`,
             html: `
@@ -98,7 +96,7 @@ export const sendTicketEmail = async ({
 export const sendNewsletterEmail = async (email) => {
     try {
         const info = await transporter.sendMail({
-            from: `"BookMyEvent" <${process.env.EMAIL_USER}>`,
+            from: `"BookMyEvent" <${process.env.EMAIL_FROM}>`,
             to: email,
             subject: "Welcome to BookMyEvent Newsletter 🎉",
             html: `
