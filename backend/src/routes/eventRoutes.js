@@ -13,6 +13,7 @@ import {
     updateRSVP,
     getRSVP,
     getTrendingEvents,
+    getEventAnalytics
 } from "../controllers/eventController.js"
 import protect from "../middleware/authMiddleware.js"
 
@@ -45,6 +46,9 @@ router.delete("/:id", protect, deleteEvent)
 
 router.post("/:eventId/favorite", protect, toggleFavorite)
 
+// ANALYTICS
+
+router.get("/:id/analytics", protect, getEventAnalytics)
 router.get("/:id", getSingleEvent)
 
 export default router
