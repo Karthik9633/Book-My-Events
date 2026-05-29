@@ -40,17 +40,17 @@ function App() {
       <main className={!hideLayout ? "pt-[88px]" : ""}>
         <Routes>
 
-          {/* ── Fully public ───────────────────────────────────────── */}
+          //Public routes
           <Route path="/login" element={<Login />} />
           <Route path="/signup" element={<Signup />} />
           <Route path="/verify-otp" element={<VerifyOTP />} />
           <Route path="/forgot-password" element={<ForgotPassword />} />
           <Route path="/reset-password" element={<ResetPassword />} />
 
-          {/* ── Shared (any logged-in user) ────────────────────────── */}
+          //all users and visitors
           <Route path="/about" element={<About />} />
 
-          {/* ── User / attendee only (organizers redirected away) ──── */}
+          //User only routes
           <Route path="/" element={<UserOnlyRoute><Home /></UserOnlyRoute>} />
           <Route path="/discover" element={<UserOnlyRoute><Discover /></UserOnlyRoute>} />
           <Route path="/event/:id" element={<UserOnlyRoute><EventDetails /></UserOnlyRoute>} />
@@ -62,7 +62,7 @@ function App() {
           <Route path="/mytickets" element={<ProtectedRoute><UserOnlyRoute><MyTickets /></UserOnlyRoute></ProtectedRoute>} />
           <Route path="/order-summary" element={<ProtectedRoute><UserOnlyRoute><OrderSummary /></UserOnlyRoute></ProtectedRoute>} />
 
-          {/* ── Organizer / Admin only ─────────────────────────────── */}
+          //organizer/admin routes
           <Route path="/organizer" element={<OrganizerRoute><OrganizerDashboard /></OrganizerRoute>} />
           <Route path="/create-event" element={<OrganizerRoute><CreateEvent /></OrganizerRoute>} />
           <Route path="/edit-event/:id" element={<OrganizerRoute><CreateEvent /></OrganizerRoute>} />
