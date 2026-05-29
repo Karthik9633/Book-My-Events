@@ -87,6 +87,12 @@ const EventDetails = () => {
 
     const total = selectedTier ? quantity * selectedTier.price : 0;
 
+    const remainingTickets = selectedTier
+        ? (selectedTier.capacity || 0) - (selectedTier.sold || 0)
+        : 0;
+
+    const isSoldOut = remainingTickets <= 0;
+
     const shareUrl = window.location.href;
 
     const handleCopyLink = async () => {
@@ -219,24 +225,150 @@ const EventDetails = () => {
 
                     <select
                         value={selectedTier?.name || ""}
-                        onChange={(e) => setSelectedTier(event.ticketTiers.find((t) => t.name === e.target.value))}
+                        onChange={(e) => {
+
+                            const tier = event.ticketTiers.find(
+                                (t) => t.name === e.target.value
+                            );
+
+                            setSelectedTier(tier);
+
+                            setQuantity(1);
+
+                        }}
                         className="w-full border p-3 rounded-xl mb-4"
                     >
-                        {event.ticketTiers?.map((tier) => (
-                            <option key={tier._id} value={tier.name}>{tier.name} — ₹ {tier.price}</option>
-                        ))}
+                        {event.ticketTiers?.map((tier) => {
+
+                            const remaining =
+                                (tier.capacity || 0) -
+                                (tier.sold || 0);
+
+                            const soldOut =
+                                tier.capacity &&
+                                remaining <= 0;
+
+                            return (
+                                <option
+                                    key={tier._id}
+                                    value={tier.name}
+                                    disabled={soldOut}
+                                >
+                                    {
+                                        soldOut
+                                            ? "🔴"
+                                            : remaining <= 10
+                                                ? "🟡"
+                                                : "🟢"
+                                    }
+
+                                    {" "}
+
+                                    {tier.name}
+
+                                    {" — ₹ "}
+
+                                    {tier.price}
+
+                                    {
+                                        soldOut
+                                            ? " • Sold Out"
+                                            : ""
+                                    }
+
+                                </option>
+                            );
+                        })}
                     </select>
 
-                    <input
-                        type="number"
-                        min="1"
-                        value={quantity}
-                        onChange={(e) => setQuantity(Math.max(1, Number(e.target.value)))}
-                        className="w-full border p-3 rounded-xl mb-6"
-                    />
+                    <div className="flex gap-4 text-xs text-gray-500 mb-4">
 
-                    <button onClick={handleRegister} className="w-full bg-purple-600 text-white rounded-xl py-4 font-bold">
-                        Register Now
+                        <span>
+                            🟢 Available
+                        </span>
+
+                        <span>
+                            🟡 Few Left
+                        </span>
+
+                        <span>
+                            🔴 Sold Out
+                        </span>
+
+                    </div>
+
+                    <div className="mb-6">
+
+                        <div className="flex items-center justify-between mb-2">
+
+                            <p className="font-semibold">
+                                Quantity
+                            </p>
+
+                            <p className={`text-sm font-medium ${isSoldOut
+                                ? "text-red-600"
+                                : remainingTickets <= 10
+                                    ? "text-red-500"
+                                    : "text-green-600"
+                                }`}>
+                                {
+                                    isSoldOut
+                                        ? "Sold Out"
+                                        : remainingTickets <= 10
+                                            ? `Only ${remainingTickets} tickets left`
+                                            : `${remainingTickets} tickets available`
+                                }
+                            </p>
+
+                        </div>
+
+                        <div className="flex items-center gap-3">
+
+                            <button
+                                onClick={() =>
+                                    setQuantity(
+                                        Math.max(1, quantity - 1)
+                                    )
+                                }
+                                className="w-12 h-12 rounded-xl border text-xl font-bold hover:bg-gray-100"
+                            >
+                                -
+                            </button>
+
+                            <div className="flex-1 text-center border rounded-xl py-3 font-bold text-lg">
+                                {quantity}
+                            </div>
+
+                            <button
+                                onClick={() => {
+
+                                    if (
+                                        quantity < remainingTickets
+                                    ) {
+                                        setQuantity(
+                                            quantity + 1
+                                        );
+                                    }
+
+                                }}
+                                disabled={
+                                    quantity >= remainingTickets
+                                }
+                                className="w-12 h-12 rounded-xl border text-xl font-bold hover:bg-gray-100 disabled:opacity-40"
+                            >
+                                +
+                            </button>
+
+                        </div>
+
+                    </div>
+
+                    <button onClick={handleRegister} disabled={isSoldOut} className="w-full bg-purple-600 text-white rounded-xl py-4 font-bold disabled:opacity-50">
+                        {
+                            isSoldOut
+                                ? "Sold Out"
+                                : "Register Now"
+                        }
                     </button>
                 </div>
             </div>
