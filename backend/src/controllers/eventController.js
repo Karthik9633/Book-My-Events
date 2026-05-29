@@ -502,3 +502,28 @@ export const getTrendingEvents = async (req, res) => {
         });
     }
 };
+
+// GET /api/events/:id/analytics  — organizer sees tier breakdown + bookings
+export const getEventAnalytics = async (req, res) => {
+    try {
+        const event = await Event.findById(req.params.id.trim())
+            .populate("category", "name")
+            .populate("organizer", "name email");
+
+        if (!event)
+            return res.status(404).json({ success: false, message: "Event not found" });
+
+        // Only the owner or admin can see analytics
+        if (
+            event.organizer._id.toString() !== req.user.id &&
+            req.user.role !== "admin"
+        ) {
+            return res.status(403).json({ success: false, message: "Not authorized" });
+        }
+
+        res.json({ success: true, event });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ success: false, message: error.message });
+    }
+};
