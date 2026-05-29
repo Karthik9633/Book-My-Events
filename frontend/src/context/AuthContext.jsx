@@ -12,14 +12,6 @@ export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  
-  const [tickets, setTickets] = useState(() => {
-    try {
-      return JSON.parse(localStorage.getItem("tickets") || "[]");
-    } catch {
-      return [];
-    }
-  });
 
   // LOAD USER
   useEffect(() => {
@@ -65,21 +57,13 @@ export const AuthProvider = ({ children }) => {
   const logout = () => {
     localStorage.removeItem("token");
     localStorage.removeItem("user");
-    localStorage.removeItem("tickets"); 
     setUser(null);
-    setTickets([]);
   };
 
-  
-  const registerTicket = (ticket) => {
-    const updated = [...tickets, ticket];
-    setTickets(updated);
-    localStorage.setItem("tickets", JSON.stringify(updated));
-  };
 
   return (
     
-    <AuthContext.Provider value={{ user, loading, signup, login, logout, tickets, registerTicket }}>
+    <AuthContext.Provider value={{ user, loading, signup, login, logout}}>
       {children}
     </AuthContext.Provider>
   );
