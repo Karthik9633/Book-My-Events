@@ -255,7 +255,7 @@ const Signup = () => {
 
                     {/* FULL NAME */}
                     <div className="mb-5">
-                        <label className="text-sm font-medium">Company Name</label>
+                        <label className="text-sm font-medium">{isOrganizer ? "Company Name" : "Full Name"}</label>
                         <div className="flex items-center border rounded-full px-4 py-3 mt-2 bg-white">
                             <User size={18} className="text-gray-400 mr-3" />
                             <input
@@ -265,7 +265,7 @@ const Signup = () => {
                                     setName(e.target.value);
                                     validate("name", e.target.value);
                                 }}
-                                placeholder="Enter Your Company Name"
+                                placeholder={isOrganizer ? "Enter Your Company Name" : "Enter Your Name"}
                                 className="w-full outline-none bg-transparent"
                             />
                         </div>
