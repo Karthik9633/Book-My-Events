@@ -43,3 +43,5 @@ export const fetchFavoriteIds = () => API.get("/events/user/favorite-ids");
 export const fetchCategories = () => API.get("/categories");
 
 export const createOrder = (amount) => API.post("/payments/create-order", { amount });
+
+export const fetchMyTickets = () => API.get("/payments/my-tickets");
