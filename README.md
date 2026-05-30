@@ -2,7 +2,7 @@
 
 <div align="center">
 
-<img src="https://via.placeholder.com/1200x400?text=BookMyEvent" alt="BookMyEvent Banner" />
+<img src="https://res.cloudinary.com/dh6lukw7f/image/upload/f_auto,q_auto/ChatGPT_Image_May_31_2026_12_09_24_AM_w59fb6" alt="BookMyEvent Banner" />
 
 <br/>
 
