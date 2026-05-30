@@ -21,6 +21,10 @@ const MyEvents = () => {
     };
 
     useEffect(() => {
+        window.scrollTo({ top: 0, behavior: "auto" });
+    }, []);
+
+    useEffect(() => {
         loadEvents();
         const t = setTimeout(() => setMounted(true), 80);
         return () => clearTimeout(t);
