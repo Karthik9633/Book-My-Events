@@ -1,31 +1,94 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import MapSidebar from "../components/MapSidebar";
 import MapView from "../components/MapView";
-import { events } from "../data/events";
+import { fetchEvents } from "../api/eventApi";
 
 const MapPage = () => {
-  const [selectedCategory, setSelectedCategory] = useState("All");
+
+  const [events, setEvents] = useState([]);
+
+  const [loading, setLoading] = useState(true);
+
+  const [selectedCategory, setSelectedCategory] =
+    useState("ALL");
+
+  useEffect(() => {
+
+    const loadEvents = async () => {
+
+      try {
+
+        const { data } =
+          await fetchEvents();
+
+        if (data.success) {
+
+          setEvents(data.events);
+
+        }
+
+      } catch (error) {
+
+        console.log(error);
+
+      } finally {
+
+        setLoading(false);
+
+      }
+
+    };
+
+    loadEvents();
+
+  }, []);
 
   const filteredEvents =
-    selectedCategory === "All"
+    selectedCategory === "ALL"
       ? events
-      : events.filter((e) => e.category === selectedCategory);
+      : events.filter(
+        (event) =>
+          (
+            event.category?.name ||
+            event.category
+          )
+            .toUpperCase()
+            .replace("&", "&")
+          === selectedCategory
+      );
+
+  if (loading) {
+
+    return (
+      <div className="h-screen flex items-center justify-center">
+        Loading events...
+      </div>
+    );
+
+  }
 
   return (
+
     <div className="h-[calc(100vh-80px)] flex">
 
       <MapSidebar
+        events={events}
         selectedCategory={selectedCategory}
         setSelectedCategory={setSelectedCategory}
-        events={events}
       />
 
       <div className="flex-1">
-        <MapView events={filteredEvents} />
+
+        <MapView
+          events={filteredEvents}
+        />
+
       </div>
 
     </div>
+
   );
+
 };
 
 export default MapPage;
