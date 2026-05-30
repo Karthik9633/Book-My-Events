@@ -12,13 +12,12 @@ const EventDetails = () => {
 
     const [event, setEvent] = useState(null);
     const [loading, setLoading] = useState(true);
-    const [selectedTier, setSelectedTier] = useState(null);
+    const [selectedTierName, setSelectedTierName] = useState("");
     const [quantity, setQuantity] = useState(1);
     const [interested, setInterested] = useState(0);
     const [going, setGoing] = useState(0);
     const [userRSVP, setUserRSVP] = useState(null);
     const [timeLeft, setTimeLeft] = useState({ days: 0, hours: 0, minutes: 0, seconds: 0 });
-    // Mobile booking sheet toggle
     const [showBookingSheet, setShowBookingSheet] = useState(false);
 
     useEffect(() => {
@@ -33,7 +32,9 @@ const EventDetails = () => {
     }, [id]);
 
     useEffect(() => {
-        if (event?.ticketTiers?.length) setSelectedTier(event.ticketTiers[0]);
+        if (event?.ticketTiers?.length) {
+            setSelectedTierName(event.ticketTiers[0].name);
+        }
     }, [event]);
 
     useEffect(() => {
@@ -87,6 +88,9 @@ const EventDetails = () => {
         ? `${event.location.address}, ${event.location.city}, ${event.location.state}`
         : "";
 
+    // Derive selectedTier from name — no setState on select change
+    const selectedTier = event.ticketTiers?.find((t) => t.name === selectedTierName) || null;
+
     const total = selectedTier ? quantity * selectedTier.price : 0;
 
     const remainingTickets = selectedTier
@@ -134,18 +138,17 @@ const EventDetails = () => {
         }
     };
 
-    // Reusable booking panel content
-    const BookingPanel = () => (
+    // Booking panel as JSX — NOT a nested component, just a variable
+    const bookingPanel = (
         <>
             <h2 className="text-2xl sm:text-3xl font-bold text-purple-600 mb-4 sm:mb-6">
                 ₹ {total}
             </h2>
 
             <select
-                value={selectedTier?.name || ""}
+                value={selectedTierName}
                 onChange={(e) => {
-                    const tier = event.ticketTiers.find((t) => t.name === e.target.value);
-                    setSelectedTier(tier);
+                    setSelectedTierName(e.target.value);
                     setQuantity(1);
                 }}
                 className="w-full border p-3 rounded-xl mb-4 text-sm sm:text-base"
@@ -173,26 +176,22 @@ const EventDetails = () => {
                 <div className="flex items-center justify-between mb-2">
                     <p className="font-semibold text-sm sm:text-base">Quantity</p>
                     <p className={`text-xs sm:text-sm font-medium ${isSoldOut ? "text-red-600" : remainingTickets <= 10 ? "text-red-500" : "text-green-600"}`}>
-                        {isSoldOut ? "Sold Out" : remainingTickets <= 10
-                            ? `Only ${remainingTickets} left`
-                            : `${remainingTickets} available`}
+                        {isSoldOut ? "Sold Out" : `${remainingTickets} left`}
                     </p>
                 </div>
-
                 <div className="flex items-center gap-3">
                     <button
-                        onClick={() => setQuantity(Math.max(1, quantity - 1))}
-                        className="w-11 h-11 sm:w-12 sm:h-12 rounded-xl border text-xl font-bold hover:bg-gray-100 active:bg-gray-200 touch-manipulation"
+                        onClick={() => setQuantity((q) => Math.max(1, q - 1))}
+                        disabled={quantity <= 1}
+                        className="w-10 h-10 rounded-full border text-xl font-bold disabled:opacity-30 hover:bg-gray-100 active:bg-gray-200 touch-manipulation"
                     >
-                        -
+                        −
                     </button>
-                    <div className="flex-1 text-center border rounded-xl py-3 font-bold text-lg">
-                        {quantity}
-                    </div>
+                    <span className="text-lg font-semibold w-6 text-center">{quantity}</span>
                     <button
-                        onClick={() => { if (quantity < remainingTickets) setQuantity(quantity + 1); }}
+                        onClick={() => setQuantity((q) => Math.min(remainingTickets, q + 1))}
                         disabled={quantity >= remainingTickets}
-                        className="w-11 h-11 sm:w-12 sm:h-12 rounded-xl border text-xl font-bold hover:bg-gray-100 active:bg-gray-200 disabled:opacity-40 touch-manipulation"
+                        className="w-10 h-10 rounded-full border text-xl font-bold disabled:opacity-30 hover:bg-gray-100 active:bg-gray-200 touch-manipulation"
                     >
                         +
                     </button>
@@ -210,7 +209,6 @@ const EventDetails = () => {
     );
 
     return (
-        // Extra bottom padding on mobile for the sticky CTA bar
         <div className="bg-gray-50 min-h-screen pb-24 lg:pb-10">
 
             {/* Breadcrumb */}
@@ -235,12 +233,10 @@ const EventDetails = () => {
                 {/* ── Left / Main Content ── */}
                 <div className="lg:col-span-2">
 
-                    {/* Title */}
                     <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold mb-4 sm:mb-6 leading-tight">
                         {event.title}
                     </h1>
 
-                    {/* Date & Venue */}
                     <div className="mb-6 space-y-1 text-sm sm:text-base text-gray-700">
                         <p>📅 {date}</p>
                         <p>📍 {venue}</p>
@@ -271,24 +267,9 @@ const EventDetails = () => {
                     <div className="bg-white rounded-2xl shadow-sm p-4 sm:p-6 mb-6">
                         <h3 className="text-lg sm:text-xl font-bold mb-3 sm:mb-4">📤 Share Event</h3>
                         <div className="flex flex-wrap gap-2 sm:gap-3">
-                            <button
-                                onClick={handleWhatsApp}
-                                className="flex-1 min-w-[100px] bg-green-600 text-white px-4 py-3 rounded-xl font-semibold text-sm hover:bg-green-700 active:bg-green-800 transition touch-manipulation"
-                            >
-                                WhatsApp
-                            </button>
-                            <button
-                                onClick={handleCopyLink}
-                                className="flex-1 min-w-[100px] border border-gray-300 px-4 py-3 rounded-xl font-semibold text-sm hover:bg-gray-100 active:bg-gray-200 transition touch-manipulation"
-                            >
-                                Copy Link
-                            </button>
-                            <button
-                                onClick={handleNativeShare}
-                                className="flex-1 min-w-[100px] bg-purple-600 text-white px-4 py-3 rounded-xl font-semibold text-sm hover:bg-purple-700 active:bg-purple-800 transition touch-manipulation"
-                            >
-                                Share
-                            </button>
+                            <button onClick={handleWhatsApp} className="flex-1 min-w-[100px] bg-green-600 text-white px-4 py-3 rounded-xl font-semibold text-sm hover:bg-green-700 active:bg-green-800 transition touch-manipulation">WhatsApp</button>
+                            <button onClick={handleCopyLink} className="flex-1 min-w-[100px] border border-gray-300 px-4 py-3 rounded-xl font-semibold text-sm hover:bg-gray-100 active:bg-gray-200 transition touch-manipulation">Copy Link</button>
+                            <button onClick={handleNativeShare} className="flex-1 min-w-[100px] bg-purple-600 text-white px-4 py-3 rounded-xl font-semibold text-sm hover:bg-purple-700 active:bg-purple-800 transition touch-manipulation">Share</button>
                         </div>
                     </div>
 
@@ -325,13 +306,12 @@ const EventDetails = () => {
 
                 {/* ── Desktop Booking Sidebar ── */}
                 <div className="hidden lg:block bg-white rounded-3xl p-8 shadow h-fit sticky top-24">
-                    <BookingPanel />
+                    {bookingPanel}
                 </div>
             </div>
 
             {/* ── Mobile Booking Bottom Bar ── */}
             <div className="lg:hidden fixed bottom-0 left-0 right-0 z-50 bg-white border-t border-gray-200 shadow-xl">
-                {/* Collapsed bar */}
                 {!showBookingSheet && (
                     <div className="flex items-center justify-between px-4 py-3 gap-3">
                         <div>
@@ -348,7 +328,6 @@ const EventDetails = () => {
                     </div>
                 )}
 
-                {/* Expanded sheet */}
                 {showBookingSheet && (
                     <div className="px-4 pt-3 pb-6 max-h-[85vh] overflow-y-auto">
                         <div className="flex items-center justify-between mb-4">
@@ -360,7 +339,7 @@ const EventDetails = () => {
                                 ✕
                             </button>
                         </div>
-                        <BookingPanel />
+                        {bookingPanel}
                     </div>
                 )}
             </div>
