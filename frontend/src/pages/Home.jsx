@@ -56,7 +56,7 @@ const Home = () => {
 
       {/* Category Filter Bar */}
       <div className="bg-gray-50 border-b sticky top-0 z-30">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-10 py-4 flex gap-3 overflow-x-auto scrollbar-hide">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-10 py-4 flex gap-3 overflow-x-auto scrollbar-hide lg:justify-center">
           {categories.map((cat, index) => (
             <button
               key={index}
