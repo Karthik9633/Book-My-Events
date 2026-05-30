@@ -88,7 +88,6 @@ const EventDetails = () => {
         ? `${event.location.address}, ${event.location.city}, ${event.location.state}`
         : "";
 
-    // Derive selectedTier from name — no setState on select change
     const selectedTier = event.ticketTiers?.find((t) => t.name === selectedTierName) || null;
 
     const total = selectedTier ? quantity * selectedTier.price : 0;
