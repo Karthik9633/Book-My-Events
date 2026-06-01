@@ -40,13 +40,13 @@ export const createEvent = async (req, res) => {
     }
 };
 
-//  Get All Events 
+// Get All Events
 export const getEvents = async (req, res) => {
     try {
-        const events = await Event.find()
+        const events = await Event.find({  status: "approved",date: { $gte: new Date() } })
             .populate("organizer", "name email")
             .populate("category", "name")
-            .sort({ createdAt: -1 });
+            .sort({ date: 1 });
 
         res.json({ success: true, count: events.length, events });
     } catch (error) {
@@ -55,7 +55,7 @@ export const getEvents = async (req, res) => {
     }
 };
 
-//  Get Single Event 
+// Get Single Event
 export const getSingleEvent = async (req, res) => {
     try {
         const event = await Event.findById(req.params.id.trim())
@@ -75,7 +75,7 @@ export const getSingleEvent = async (req, res) => {
     }
 };
 
-//  Update Event
+// Update Event
 export const updateEvent = async (req, res) => {
     try {
         const event = await Event.findById(req.params.id.trim());
@@ -98,7 +98,7 @@ export const updateEvent = async (req, res) => {
     }
 };
 
-//  Delete Event
+// Delete Event
 export const deleteEvent = async (req, res) => {
     try {
         const event = await Event.findById(req.params.id.trim());
@@ -109,8 +109,9 @@ export const deleteEvent = async (req, res) => {
             return res.status(403).json({ success: false, message: "Not authorized" });
 
         await event.deleteOne();
-        // also clean up favorites for this event
+        // Clean up related data
         await Favorite.deleteMany({ event: req.params.id });
+        await RSVP.deleteMany({ event: req.params.id });
 
         res.json({ success: true, message: "Event deleted" });
     } catch (error) {
@@ -119,7 +120,8 @@ export const deleteEvent = async (req, res) => {
     }
 };
 
-//Search & Filter Events
+// Search & Filter Events
+// ✅ FIX: Always filter out past events; merge with user date range if provided
 export const searchEvents = async (req, res) => {
     try {
         const {
@@ -138,33 +140,17 @@ export const searchEvents = async (req, res) => {
 
         const query = {};
 
+        // ✅ FIX: Default to upcoming events only — always filter out past events
+        // If user provides a startDate, use whichever is later (now vs their startDate)
+        const now = new Date();
+        query.date = { $gte: now };
+
         if (search.trim()) {
             const keyword = search.trim();
             query.$or = [
-                {
-                    title: {
-                        $regex: keyword,
-                        $options: "i"
-                    }
-                },
-
-                {
-                    description: {
-                        $regex: keyword,
-                        $options: "i"
-                    }
-                },
-
-                {
-
-                    tags: {
-                        $elemMatch: {
-                            $regex: keyword,
-                            $options: "i"
-                        }
-
-                    }
-                }
+                { title: { $regex: keyword, $options: "i" } },
+                { description: { $regex: keyword, $options: "i" } },
+                { tags: { $elemMatch: { $regex: keyword, $options: "i" } } },
             ];
         }
 
@@ -188,10 +174,13 @@ export const searchEvents = async (req, res) => {
             query.price = { $lte: Number(maxPrice) };
         }
 
-        // Date range filter
+        // Date range filter — merged with the "future only" base filter above
         if (startDate || endDate) {
-            query.date = {};
-            if (startDate) query.date.$gte = new Date(startDate);
+            if (startDate) {
+                const userStart = new Date(startDate);
+                // Use whichever is later: now or user's startDate
+                query.date.$gte = userStart > now ? userStart : now;
+            }
             if (endDate) {
                 const end = new Date(endDate);
                 end.setHours(23, 59, 59, 999);
@@ -206,8 +195,9 @@ export const searchEvents = async (req, res) => {
         }
 
         // Sort options
-        let sortOption = { createdAt: -1 };
-        if (sort === "popular") sortOption = { bookmarks: -1, views: -1 };
+        let sortOption = { date: 1 }; // default: soonest first makes more sense for upcoming events
+        if (sort === "latest") sortOption = { createdAt: -1 };
+        else if (sort === "popular") sortOption = { bookmarks: -1, views: -1 };
         else if (sort === "date-asc") sortOption = { date: 1 };
         else if (sort === "price-asc") sortOption = { price: 1 };
         else if (sort === "price-desc") sortOption = { price: -1 };
@@ -238,6 +228,7 @@ export const searchEvents = async (req, res) => {
 };
 
 // Get Events for Organizer
+// Note: organizer's own dashboard shows all their events including past ones
 export const getMyEvents = async (req, res) => {
     try {
         const events = await Event.find({ organizer: req.user.id })
@@ -274,10 +265,7 @@ export const toggleFavorite = async (req, res) => {
             });
         }
 
-        await Favorite.create({
-            user: userId,
-            event: eventId
-        });
+        await Favorite.create({ user: userId, event: eventId });
         event.bookmarks += 1;
         await event.save();
         res.json({
@@ -330,9 +318,7 @@ export const getFavoriteIds = async (req, res) => {
 
 export const updateRSVP = async (req, res) => {
     try {
-        const {
-            status
-        } = req.body;
+        const { status } = req.body;
         const eventId = req.params.id;
         const userId = req.user.id;
         if (!["interested", "going", "none"].includes(status)) {
@@ -341,80 +327,48 @@ export const updateRSVP = async (req, res) => {
                 message: "Invalid RSVP status"
             });
         }
-        const existingRSVP = await RSVP.findOne({
-            user: userId,
-            event: eventId
-        });
+        const existingRSVP = await RSVP.findOne({ user: userId, event: eventId });
         if (status === "none") {
             if (existingRSVP) {
                 await existingRSVP.deleteOne();
             }
-            return res.json({
-                success: true,
-                userStatus: null
-            });
+            return res.json({ success: true, userStatus: null });
         }
         if (existingRSVP) {
             existingRSVP.status = status;
             await existingRSVP.save();
         } else {
-            await RSVP.create({
-                user: userId,
-                event: eventId,
-                status
-            });
+            await RSVP.create({ user: userId, event: eventId, status });
         }
-        return res.json({
-            success: true,
-            userStatus: status
-        });
+        return res.json({ success: true, userStatus: status });
     } catch (error) {
         console.log(error);
-        res.status(500).json({
-            success: false,
-            message: error.message
-        });
+        res.status(500).json({ success: false, message: error.message });
     }
 };
-
 
 export const getRSVP = async (req, res) => {
     try {
         const eventId = req.params.id;
-        const interested = await RSVP.countDocuments({
-            event: eventId,
-            status: "interested"
-        });
-        const going = await RSVP.countDocuments({
-            event: eventId,
-            status: "going"
-        });
+        const interested = await RSVP.countDocuments({ event: eventId, status: "interested" });
+        const going = await RSVP.countDocuments({ event: eventId, status: "going" });
         let userStatus = null;
         if (req.user) {
-            const rsvp = await RSVP.findOne({
-                user: req.user.id,
-                event: eventId
-            });
+            const rsvp = await RSVP.findOne({ user: req.user.id, event: eventId });
             userStatus = rsvp?.status || null;
         }
-        res.json({
-            success: true,
-            interested,
-            going,
-            userStatus
-        });
+        res.json({ success: true, interested, going, userStatus });
     } catch (error) {
         console.log(error);
-        res.status(500).json({
-            success: false,
-            message: error.message
-        });
+        res.status(500).json({ success: false, message: error.message });
     }
 };
 
+// Get Trending Events
+// ✅ FIX: Only show upcoming events in trending
 export const getTrendingEvents = async (req, res) => {
     try {
-        const events = await Event.find()
+        const events = await Event.find({ date: { $gte: new Date() } })
             .populate("category", "name")
             .populate("organizer", "name email")
             .lean();
@@ -423,33 +377,11 @@ export const getTrendingEvents = async (req, res) => {
             {
                 $group: {
                     _id: "$event",
-
                     interested: {
-                        $sum: {
-                            $cond: [
-                                {
-                                    $eq: ["$status", "interested"],
-                                },
-
-                                1,
-
-                                0,
-                            ],
-                        },
+                        $sum: { $cond: [{ $eq: ["$status", "interested"] }, 1, 0] },
                     },
-
                     going: {
-                        $sum: {
-                            $cond: [
-                                {
-                                    $eq: ["$status", "going"],
-                                },
-
-                                1,
-
-                                0,
-                            ],
-                        },
+                        $sum: { $cond: [{ $eq: ["$status", "going"] }, 1, 0] },
                     },
                 },
             },
@@ -462,47 +394,27 @@ export const getTrendingEvents = async (req, res) => {
         const trending = [];
 
         for (const event of events) {
-            const rsvp = rsvpMap.get(event._id.toString()) || {
-                interested: 0,
-
-                going: 0,
-            };
-
+            const rsvp = rsvpMap.get(event._id.toString()) || { interested: 0, going: 0 };
             const bookmarks = event.bookmarks || 0;
-
             const interested = rsvp.interested || 0;
-
             const going = rsvp.going || 0;
-
             const views = event.views || 0;
 
             if (bookmarks === 0 && interested === 0 && going === 0) { continue; }
 
             const score = bookmarks * 5 + interested * 10 + going * 20 + views * 0.05;
 
-            trending.push({
-                ...event,
-                trendingScore: score,
-                interested,
-                going,
-            });
+            trending.push({ ...event, trendingScore: score, interested, going });
         }
 
         trending.sort((a, b) => b.trendingScore - a.trendingScore);
 
-        res.json({
-            success: true,
-            events: trending.slice(0, 6),
-        });
+        res.json({ success: true, events: trending.slice(0, 6) });
     } catch (error) {
         console.log(error);
-        res.status(500).json({
-            success: false,
-            message: error.message,
-        });
+        res.status(500).json({ success: false, message: error.message });
     }
 };
-
 
 export const getEventAnalytics = async (req, res) => {
     try {
@@ -513,7 +425,6 @@ export const getEventAnalytics = async (req, res) => {
         if (!event)
             return res.status(404).json({ success: false, message: "Event not found" });
 
-        // Only the owner or admin can see analytics
         if (
             event.organizer._id.toString() !== req.user.id &&
             req.user.role !== "admin"
