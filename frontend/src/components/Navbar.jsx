@@ -10,7 +10,11 @@ const Navbar = () => {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
 
-  const isOrganizer = user?.role === "organizer" || user?.role === "admin";
+  const isOrganizer =
+    user?.role === "organizer";
+
+  const isAdmin =
+    user?.role === "admin";
 
   const navLinkClass = ({ isActive }) =>
     isActive
@@ -24,13 +28,46 @@ const Navbar = () => {
       <div className="h-full px-4 sm:px-6 lg:px-10 flex justify-between items-center">
 
         {/* LOGO */}
-        <Link to={isOrganizer ? "/organizer" : "/"}>
+        <Link
+          to={
+            isAdmin
+              ? "/admin"
+              : isOrganizer
+                ? "/organizer"
+                : "/"
+          }
+        >
           <h1 className="text-2xl font-bold text-purple-600">BookMyEvent</h1>
         </Link>
 
         {/* DESKTOP LINKS */}
         <div className="hidden md:flex space-x-8 font-medium">
-          {isOrganizer ? (
+          {isAdmin ? (
+
+            <>
+              <NavLink
+                to="/admin"
+                className={navLinkClass}
+              >
+                Admin Dashboard
+              </NavLink>
+
+              <NavLink
+                to="/"
+                className={navLinkClass}
+              >
+                Website
+              </NavLink>
+
+              <NavLink
+                to="/about"
+                className={navLinkClass}
+              >
+                About
+              </NavLink>
+            </>
+
+          ) : isOrganizer ? (
             // ── Organizer nav ──
             <>
               <NavLink to="/organizer" className={navLinkClass}>Dashboard</NavLink>
@@ -61,7 +98,41 @@ const Navbar = () => {
 
               {dropdown && (
                 <div className="absolute right-0 top-14 bg-white shadow-lg rounded-xl w-44 py-2 z-50">
-                  {isOrganizer ? (
+                  {isAdmin ? (
+
+                    <>
+                      <button
+                        onClick={() => {
+                          navigate("/admin");
+                          setDropdown(false);
+                        }}
+                        className="w-full text-left px-4 py-2 hover:bg-gray-100 text-purple-600 font-semibold"
+                      >
+                        Admin Dashboard
+                      </button>
+
+                      <button
+                        onClick={() => {
+                          navigate("/");
+                          setDropdown(false);
+                        }}
+                        className="w-full text-left px-4 py-2 hover:bg-gray-100"
+                      >
+                        View Website
+                      </button>
+
+                      <button
+                        onClick={() => {
+                          navigate("/organizer");
+                          setDropdown(false);
+                        }}
+                        className="w-full text-left px-4 py-2 hover:bg-gray-100"
+                      >
+                        Organizer Dashboard
+                      </button>
+                    </>
+
+                  ) : isOrganizer ? (
                     // Organizer dropdown
                     <>
                       <button
@@ -122,7 +193,35 @@ const Navbar = () => {
       <div className={`md:hidden transition-all duration-300 overflow-hidden ${isOpen ? "max-h-[500px] opacity-100" : "max-h-0 opacity-0"}`}>
         <div className="px-6 pb-6 flex flex-col gap-4 bg-white shadow-lg">
 
-          {isOrganizer ? (
+          {isAdmin ? (
+
+            <>
+              <NavLink
+                to="/admin"
+                onClick={() => setIsOpen(false)}
+                className="font-semibold text-purple-600"
+              >
+                Admin Dashboard
+              </NavLink>
+
+              <NavLink
+                to="/"
+                onClick={() => setIsOpen(false)}
+                className="font-medium"
+              >
+                Website
+              </NavLink>
+
+              <NavLink
+                to="/organizer"
+                onClick={() => setIsOpen(false)}
+                className="font-medium"
+              >
+                Organizer Dashboard
+              </NavLink>
+            </>
+
+          ) : isOrganizer ? (
             // ── Organizer mobile nav ──
             <>
               <NavLink to="/organizer" onClick={() => setIsOpen(false)} className="font-semibold text-purple-600">Dashboard</NavLink>
