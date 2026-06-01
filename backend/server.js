@@ -1,5 +1,4 @@
 import "dotenv/config";
-
 import express from "express";
 import cors from "cors";
 import connectDB from "./src/config/db.js";
@@ -9,8 +8,8 @@ import bookmarkRoutes from "./src/routes/bookmarkRoutes.js";
 import categoryRoutes from "./src/routes/categoryRoutes.js";
 import paymentRoutes from "./src/routes/paymentRoutes.js";
 import newsletterRoutes from "./src/routes/newsletterRoutes.js";
-
-connectDB();
+import adminRoutes from "./src/routes/adminRoutes.js";
+import { startEventCleanupScheduler } from "./src/utils/eventScheduler.js";
 
 const app = express();
 
@@ -20,7 +19,6 @@ app.use(cors({
             "http://localhost:5173",
             "https://book-my-events-tau.vercel.app",
         ];
-        
         if (!origin || allowed.includes(origin) || origin.endsWith(".vercel.app")) {
             callback(null, true);
         } else {
@@ -38,14 +36,14 @@ app.use("/api/bookmarks", bookmarkRoutes);
 app.use("/api/categories", categoryRoutes);
 app.use("/api/payments", paymentRoutes);
 app.use("/api/newsletter", newsletterRoutes);
+app.use("/api/admin", adminRoutes);
 
-
-app.get("/", (req, res) => {
-    res.send("BookMyEvent API Running");
-});
+app.get("/", (req, res) => res.send("BookMyEvent API Running"));
 
 const PORT = process.env.PORT || 5000;
 
-app.listen(PORT, () => {
-    console.log(`Server running on port ${PORT}`);
+//Start scheduler only AFTER DB is connected
+connectDB().then(() => {
+    startEventCleanupScheduler();
+    app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
 });
