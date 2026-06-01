@@ -102,6 +102,16 @@ export const loginUser = async (req, res) => {
             });
         }
 
+        if (!user.isActive) {
+
+            return res.status(403).json({
+                success: false,
+                message: "Account disabled by admin"
+
+            });
+
+        }
+
         if (!user.verified) {
 
             return res.status(401).json({
