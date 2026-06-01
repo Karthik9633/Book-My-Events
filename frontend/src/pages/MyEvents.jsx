@@ -422,7 +422,6 @@ const MyEvents = () => {
                                         }}>
                                             {event.title}
                                         </h2>
-                                        
 
                                         {/* Meta row */}
                                         <div style={{ display: "flex", gap: 14, marginBottom: 16, flexWrap: "wrap" }}>
