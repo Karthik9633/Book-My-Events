@@ -39,9 +39,22 @@ const EventDetails = () => {
 
     useEffect(() => {
         if (!event?.date) return;
+
+        // Build the exact event start datetime using date + startTime
+        const getEventStartDateTime = () => {
+            const [hours, minutes] = (event.startTime || "00:00").split(":").map(Number);
+            const dt = new Date(event.date);
+            dt.setHours(hours, minutes, 0, 0);
+            return dt;
+        };
+
         const timer = setInterval(() => {
-            const diff = new Date(event.date).getTime() - Date.now();
-            if (diff <= 0) { clearInterval(timer); return; }
+            const diff = getEventStartDateTime().getTime() - Date.now();
+            if (diff <= 0) {
+                clearInterval(timer);
+                setTimeLeft({ days: 0, hours: 0, minutes: 0, seconds: 0 });
+                return;
+            }
             setTimeLeft({
                 days: Math.floor(diff / (1000 * 60 * 60 * 24)),
                 hours: Math.floor(diff / (1000 * 60 * 60)) % 24,
@@ -98,6 +111,16 @@ const EventDetails = () => {
 
     const isSoldOut = remainingTickets <= 0;
 
+    // ✅ FIX: Compute whether the event has already started/passed
+    // Combines event.date + event.startTime for an accurate check
+    const eventStartDateTime = (() => {
+        const [hours, minutes] = (event.startTime || "00:00").split(":").map(Number);
+        const dt = new Date(event.date);
+        dt.setHours(hours, minutes, 0, 0);
+        return dt;
+    })();
+    const isPast = eventStartDateTime < new Date();
+
     const shareUrl = window.location.href;
 
     const handleCopyLink = async () => {
@@ -118,6 +141,9 @@ const EventDetails = () => {
 
     const handleRegister = async () => {
         if (!user) { navigate("/login"); return; }
+        // ✅ FIX: Prevent booking if event has already started
+        if (isPast) return;
+
         navigate("/order-summary", {
             state: {
                 event,
@@ -144,13 +170,21 @@ const EventDetails = () => {
                 ₹ {total}
             </h2>
 
+            {/* ✅ FIX: Show "Event Ended" banner if past */}
+            {isPast && (
+                <div className="mb-4 px-4 py-3 bg-red-50 border border-red-200 rounded-xl text-red-600 text-sm font-medium text-center">
+                    🚫 This event has already started or ended. Booking is closed.
+                </div>
+            )}
+
             <select
                 value={selectedTierName}
                 onChange={(e) => {
                     setSelectedTierName(e.target.value);
                     setQuantity(1);
                 }}
-                className="w-full border p-3 rounded-xl mb-4 text-sm sm:text-base"
+                disabled={isPast}
+                className="w-full border p-3 rounded-xl mb-4 text-sm sm:text-base disabled:opacity-50 disabled:cursor-not-allowed"
             >
                 {event.ticketTiers?.map((tier) => {
                     const remaining = (tier.capacity || 0) - (tier.sold || 0);
@@ -171,17 +205,17 @@ const EventDetails = () => {
                 <span>🔴 Sold Out</span>
             </div>
 
-            <div className="mb-5">
-                <div className="flex items-center justify-between mb-2">
-                    <p className="font-semibold text-sm sm:text-base">Quantity</p>
-                    <p className={`text-xs sm:text-sm font-medium ${isSoldOut ? "text-red-600" : remainingTickets <= 10 ? "text-red-500" : "text-green-600"}`}>
+            <div className="flex items-center justify-between mb-6">
+                <div>
+                    <p className="text-sm text-gray-500">Tickets</p>
+                    <p className="text-sm font-medium text-gray-700">
                         {isSoldOut ? "Sold Out" : `${remainingTickets} left`}
                     </p>
                 </div>
                 <div className="flex items-center gap-3">
                     <button
                         onClick={() => setQuantity((q) => Math.max(1, q - 1))}
-                        disabled={quantity <= 1}
+                        disabled={quantity <= 1 || isPast}
                         className="w-10 h-10 rounded-full border text-xl font-bold disabled:opacity-30 hover:bg-gray-100 active:bg-gray-200 touch-manipulation"
                     >
                         −
@@ -189,7 +223,7 @@ const EventDetails = () => {
                     <span className="text-lg font-semibold w-6 text-center">{quantity}</span>
                     <button
                         onClick={() => setQuantity((q) => Math.min(remainingTickets, q + 1))}
-                        disabled={quantity >= remainingTickets}
+                        disabled={quantity >= remainingTickets || isPast}
                         className="w-10 h-10 rounded-full border text-xl font-bold disabled:opacity-30 hover:bg-gray-100 active:bg-gray-200 touch-manipulation"
                     >
                         +
@@ -197,12 +231,13 @@ const EventDetails = () => {
                 </div>
             </div>
 
+            {/* ✅ FIX: Button disabled and relabelled when event is past */}
             <button
                 onClick={handleRegister}
-                disabled={isSoldOut}
+                disabled={isSoldOut || isPast}
                 className="w-full bg-purple-600 text-white rounded-xl py-4 font-bold text-base sm:text-lg disabled:opacity-50 hover:bg-purple-700 active:bg-purple-800 transition touch-manipulation"
             >
-                {isSoldOut ? "Sold Out" : "Register Now"}
+                {isPast ? "Event Ended" : isSoldOut ? "Sold Out" : "Register Now"}
             </button>
         </>
     );
@@ -235,6 +270,13 @@ const EventDetails = () => {
                     <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold mb-4 sm:mb-6 leading-tight">
                         {event.title}
                     </h1>
+
+                    {/* ✅ FIX: Show "Event Ended" badge on the detail page itself */}
+                    {isPast && (
+                        <div className="inline-flex items-center gap-2 mb-4 px-3 py-1.5 bg-red-100 text-red-700 rounded-full text-sm font-semibold">
+                            🔴 Event Ended
+                        </div>
+                    )}
 
                     <div className="mb-6 space-y-1 text-sm sm:text-base text-gray-700">
                         <p>📅 {date}</p>
@@ -272,17 +314,19 @@ const EventDetails = () => {
                         </div>
                     </div>
 
-                    {/* Countdown */}
-                    <div className="bg-purple-100 rounded-2xl p-4 sm:p-6 mb-6">
-                        <div className="grid grid-cols-4 gap-2 sm:gap-3 text-center">
-                            {Object.entries(timeLeft).map(([k, v]) => (
-                                <div key={k} className="bg-white/60 rounded-xl py-3 px-1">
-                                    <p className="font-bold text-xl sm:text-2xl text-purple-700">{v}</p>
-                                    <p className="text-xs sm:text-sm capitalize text-gray-600">{k}</p>
-                                </div>
-                            ))}
+                    {/* Countdown — only show if event hasn't started */}
+                    {!isPast && (
+                        <div className="bg-purple-100 rounded-2xl p-4 sm:p-6 mb-6">
+                            <div className="grid grid-cols-4 gap-2 sm:gap-3 text-center">
+                                {Object.entries(timeLeft).map(([k, v]) => (
+                                    <div key={k} className="bg-white/60 rounded-xl py-3 px-1">
+                                        <p className="font-bold text-xl sm:text-2xl text-purple-700">{v}</p>
+                                        <p className="text-xs sm:text-sm capitalize text-gray-600">{k}</p>
+                                    </div>
+                                ))}
+                            </div>
                         </div>
-                    </div>
+                    )}
 
                     {/* About */}
                     <div className="mb-8 sm:mb-10">
@@ -317,12 +361,13 @@ const EventDetails = () => {
                             <p className="text-xs text-gray-500">Total</p>
                             <p className="text-xl font-bold text-purple-600">₹ {total}</p>
                         </div>
+                        {/* ✅ FIX: Disable and relabel for past events on mobile bar too */}
                         <button
-                            onClick={() => setShowBookingSheet(true)}
-                            disabled={isSoldOut}
+                            onClick={() => !isPast && setShowBookingSheet(true)}
+                            disabled={isSoldOut || isPast}
                             className="flex-1 bg-purple-600 text-white rounded-xl py-3 font-bold text-base disabled:opacity-50 active:bg-purple-800 touch-manipulation"
                         >
-                            {isSoldOut ? "Sold Out" : "Book Tickets"}
+                            {isPast ? "Event Ended" : isSoldOut ? "Sold Out" : "Book Tickets"}
                         </button>
                     </div>
                 )}
