@@ -65,9 +65,14 @@ const Login = () => {
     const response = await login(email, password);
 
     if (response.success) {
-      if (response.role === "organizer" || response.role === "admin") {
+      if (response.role === "admin") {
+        navigate("/admin");
+      }
+      else if (response.role === "organizer") {
         navigate("/organizer");
-      } else {
+      }
+
+      else {
         navigate("/");
       }
     } else {
@@ -155,7 +160,7 @@ const Login = () => {
                 className="w-full outline-none bg-transparent"
               />
               {showPassword ? (
-                <EyeOff size={18} onClick={() => setShowPassword(false)} /> 
+                <EyeOff size={18} onClick={() => setShowPassword(false)} />
               ) : (
                 <Eye size={18} onClick={() => setShowPassword(true)} />
               )}
